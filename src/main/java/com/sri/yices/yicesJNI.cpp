@@ -4588,22 +4588,18 @@ JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_valExpandFunction(JNIEnv *env, j
     return -1;
   }
   cardinality = Java_com_sri_yices_Yices_valFunctionCardinality(env, cls, mdl, tag, id);
-  if (cardinality <= 0) {
-    return -2;
-  }
-  ndef = env->GetArrayLength(def);
-  if (ndef < 1) {
-    return -3;
+  if (cardinality < 0) {
+    return -1;
   }
 
   nmap = env->GetArrayLength(mappings);
   if (nmap < cardinality) {
-    return -4;
+    return -1;
   }
   yices_init_yval_vector(&ymaps);
   code = yices_val_expand_function(reinterpret_cast<model_t *>(mdl), &yval, &ydef, &ymaps);
   if (code < 0) {
-    return -5;
+    return -1;
   }
 
   assert(static_cast<int32_t>(ymaps.size) == cardinality);
