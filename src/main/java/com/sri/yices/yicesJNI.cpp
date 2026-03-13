@@ -2690,7 +2690,7 @@ JNIEXPORT jbooleanArray JNICALL Java_com_sri_yices_Yices_bvSumComponentFactor(JN
       assert(code >= 0);
       result = convertToBoolArray(env, n, tmp);
       delete [] tmp;
-    } catch (std::bad_alloc) {
+    } catch (std::bad_alloc&) {
       out_of_mem_exception(env);
     }
   }
@@ -2716,7 +2716,7 @@ JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_bvSumComponentTerm(JNIEnv *env, 
       int32_t code = yices_bvsum_component(x, idx, tmp, &result);
       assert(code >= 0);
       delete [] tmp;
-    } catch (std::bad_alloc) {
+    } catch (std::bad_alloc&) {
       out_of_mem_exception(env);
     }
   }
@@ -2784,7 +2784,7 @@ JNIEXPORT jbooleanArray JNICALL Java_com_sri_yices_Yices_bvConstValue(JNIEnv *en
         assert(code >= 0);
         result = convertToBoolArray(env, n, tmp);
         delete [] tmp;
-      } catch (std::bad_alloc) {
+      } catch (std::bad_alloc&) {
         out_of_mem_exception(env);
       }
     }
@@ -4687,7 +4687,6 @@ JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_valFunctionCardinality(JNIEnv *e
 JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_valExpandFunction(JNIEnv *env, jclass cls, jlong mdl, jint tag, jint id,  jobjectArray def, jobjectArray mappings){
   yval_t yval;
   int32_t cardinality;
-  jsize ndef;
   jsize nmap;
   int32_t code;
   yval_t ydef;
