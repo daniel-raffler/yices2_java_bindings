@@ -2784,7 +2784,7 @@ JNIEXPORT jbooleanArray JNICALL Java_com_sri_yices_Yices_bvConstValue(JNIEnv *en
         assert(code >= 0);
         result = convertToBoolArray(env, n, tmp);
         delete [] tmp;
-      } catch (std::bad_alloc) {
+      } catch (std::bad_alloc&) {
         out_of_mem_exception(env);
       }
     }
