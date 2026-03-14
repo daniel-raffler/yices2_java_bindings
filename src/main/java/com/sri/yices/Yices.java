@@ -13,7 +13,10 @@ public final class Yices {
      */
     static {
         try {
-            System.loadLibrary("yices2java");
+            String skip = System.getProperty("yices.skipAutoloader", "false");
+            if (!Boolean.parseBoolean(skip)) {
+              System.loadLibrary("yices2java");
+            }
             init();
             is_ready = true;
         } catch (LinkageError e) {
