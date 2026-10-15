@@ -885,6 +885,17 @@ public class Terms {
         return bvAdd(arg.stream().mapToInt(Integer::intValue).toArray());
     }
 
+    static public int bvMul(int... arg) throws YicesException {
+      if (arg.length == 0) throw new IllegalArgumentException("empty input");
+      int t = Yices.bvMul(arg);
+      if (t < 0) throw new YicesException();
+      return t;
+    }
+
+    static public int bvMul(List<Integer> arg) throws YicesException {
+      return bvMul(arg.stream().mapToInt(Integer::intValue).toArray());
+    }
+
     static public int bvAnd(int... arg) throws YicesException {
         if (arg.length == 0) throw new IllegalArgumentException("empty input");
         int t = Yices.bvAnd(arg);
