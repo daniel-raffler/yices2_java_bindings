@@ -134,6 +134,12 @@ public class Model implements AutoCloseable {
         return b;
     }
 
+    public FiniteInteger ffValue(int t) throws YicesException {
+        FiniteInteger b = Yices.getFFValue(ptr, t);
+        if (b == null) throw new YicesException();
+        return b;
+    }
+
     public int scalarValue(int t) throws YicesException {
         int v = Yices.getScalarValue(ptr, t);
         if (v < 0) throw new YicesException();
@@ -219,7 +225,17 @@ public class Model implements AutoCloseable {
         }
     }
 
-
+    public void setFF(int t, BigInteger value)  throws YicesException {
+        int code = Yices.modelSetFF(ptr, t, value);
+        if (code < 0) {
+            YicesException error = YicesException.checkVersion(2, 8, 0);
+            if (error == null) {
+                // not a library mismatch error; so do the default
+                error = new YicesException();
+            }
+            throw error;
+        }
+    }
 
     public int[] collectDefinedTerms() {
         int[] retval = Yices.modelCollectDefinedTerms(ptr);
@@ -366,6 +382,12 @@ public class Model implements AutoCloseable {
         BigRational v = Yices.valGetRational(ptr, yval.tag.ordinal(), yval.id);
         if (v == null) throw new YicesException();
         return v;
+    }
+
+    public FiniteInteger ffValue(YVal yval) throws YicesException {
+        FiniteInteger b = Yices.valGetFF(ptr, yval.tag.ordinal(), yval.id);
+        if (b == null) throw new YicesException();
+        return b;
     }
 
     public boolean[] bvValue(YVal yval) throws YicesException {

@@ -1,5 +1,6 @@
 package com.sri.yices;
 
+import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.List;
 
@@ -60,6 +61,16 @@ public class Types {
         return tau;
     }
 
+    static public int ffType(BigInteger order) throws RuntimeException {
+        if (order.signum() <= 0) {
+            throw new IllegalArgumentException("Order must be a prime number and can't be negative");
+        }
+        int tau = Yices.ffType(order);
+        if (tau < 0) {
+            throw new YicesException();
+        }
+        return tau;
+    }
     /*
      * Scalar and uninterpreted types
      */

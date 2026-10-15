@@ -110,10 +110,15 @@ public final class Yices {
      * Type constructors: all types are int32
      * - they return -1 if there's an error
      */
+    private static native int bytesToFiniteFieldType(byte[] order);
+
     public static native int boolType();
     public static native int realType();
     public static native int intType();
     public static native int bvType(int num_bits); // num_bits must be positive
+    public static int ffType(BigInteger order) {
+        return bytesToFiniteFieldType(order.toByteArray());
+    }
     public static native int newScalarType(int card); // card must be positive
     public static native int newUninterpretedType();
     public static native int tupleType(int ... tau); // tau must be non-empty
@@ -255,6 +260,29 @@ public final class Yices {
     public static native int arithLt0(int x);        // x < 0
 
     /*
+     * Finite Field terms
+     */
+    private static native int bytesToFiniteFieldConstant(byte[] value, byte[] order);
+
+    public static int ffConst(BigInteger value, BigInteger order) {
+        return bytesToFiniteFieldConstant(value.toByteArray(), order.toByteArray());
+    }
+
+    public static native int ffAdd(int t1, int t2);
+    public static native int ffSub(int t1, int t2);
+    public static native int ffNeg(int t);
+    public static native int ffMul(int t1, int t2);
+    public static native int ffSquare(int t);
+    public static native int ffPower(int t, int d);
+    public static native int ffAdd(int... t);
+    public static native int ffMul(int... t);
+
+    public static native int ffEq(int t1, int t2);
+    public static native int ffNeq(int t1, int t2);
+    public static native int ffEq0(int t);
+    public static native int ffNeq0(int t);
+
+    /*
      * BITVECTOR TERMS
      */
 
@@ -394,6 +422,9 @@ public final class Yices {
     public static native boolean[] bvSumComponentFactor(int x, int idx);
     public static native int bvSumComponentTerm(int x, int idx);
 
+    public static native byte[] ffSumComponentFactor(int x, int idx);
+    public static native int ffSumComponentTerm(int x, int idx);
+
     public static SumComponent<?> sumComponent(int x, int idx) {
         SumComponent<?> result = null;
         if (Yices.termIsSum(x)) {
@@ -412,6 +443,14 @@ public final class Yices {
           if (factor != null) {
             result = new SumComponent<>(factor, term);
           }
+        }
+        if (Terms.constructor(x) == Constructor.FF_SUM) {
+            byte[] factor = ffSumComponentFactor(x, idx);
+            int term = ffSumComponentTerm(x, idx);
+
+            if (factor != null) {
+                result = new SumComponent<>(new BigInteger(factor), term);
+            }
         }
         return result;
     }
@@ -439,6 +478,7 @@ public final class Yices {
     public static native int boolConstValue(int x);      // returns -1 for error, 0 for false, 1 for true
     public static native int scalarConstantIndex(int x); // -1 for error
     public static native boolean[] bvConstValue(int x);  // null for error, or an array of n Booleans little-endian
+    private static native byte[] ffConstValueAsBytes(int x); // null for error
     private static native byte[] rationalConstNumAsBytes(int x); // null for error
     private static native byte[] rationalConstDenAsBytes(int x); // null for error
 
@@ -450,6 +490,11 @@ public final class Yices {
         } else {
             return null;
         }
+    }
+
+    public static BigInteger ffConstValue(int x) {
+        byte[] value = ffConstValueAsBytes(x);
+        return value != null ? new BigInteger(value) : null;
     }
 
     /*
@@ -574,6 +619,13 @@ public final class Yices {
     // since  2.6.4
     public static native int modelSetBVFromArray(long model, int var, int[] arr);
 
+    // since 2.8.0
+    private static native int modelSetFFValueFromBytes(long model, int var, byte[] val);
+
+    public static int modelSetFF(long model, int var, BigInteger val) {
+        return modelSetFFValueFromBytes(model, var, val.toByteArray());
+    }
+
     // since 2.?.?  (new in the 2.6.4 bindings)
     public static native int[] modelCollectDefinedTerms(long model);
 
@@ -602,6 +654,8 @@ public final class Yices {
     private static native byte[] getIntegerValueAsBytes(long model, int t);
     private static native byte[] getRationalValueNumAsBytes(long model, int t);
     private static native byte[] getRationalValueDenAsBytes(long model, int t);
+    private static native byte[] getFFValueAsBytes(long model, int t);
+    private static native byte[] getFFOrderAsBytes(long model, int t);
 
     public static BigInteger getIntegerValue(long model, int t) {
 	    byte[] val = getIntegerValueAsBytes(model, t);
@@ -613,6 +667,16 @@ public final class Yices {
         byte[] den = getRationalValueDenAsBytes(model, t);
         if (num != null && den != null) {
             return new BigRational(num, den);
+        } else {
+            return null;
+        }
+    }
+
+    public static FiniteInteger getFFValue(long model, int t) {
+        byte[] val = getFFValueAsBytes(model, t);
+        byte[] ord = getFFOrderAsBytes(model, t);
+        if (val != null && ord != null) {
+            return new FiniteInteger(new BigInteger(val), new BigInteger(ord));
         } else {
             return null;
         }
@@ -827,6 +891,8 @@ public final class Yices {
     private static native byte[] valGetIntegerAsBytes(long model, int tag, int id);
     private static native byte[] valGetRationalNumAsBytes(long model, int tag, int id);
     private static native byte[] valGetRationalDenAsBytes(long model, int tag, int id);
+    private static native byte[] valGetFFValueAsBytes(long model, int tag, int id);
+    private static native byte[] valGetFFOrderAsBytes(long model, int tag, int id);
 
     public static BigInteger valGetInteger(long model, int tag, int id) {
 	    byte[] val = valGetIntegerAsBytes(model, tag, id);
@@ -843,6 +909,15 @@ public final class Yices {
         }
     }
 
+    public static FiniteInteger valGetFF(long model, int tag, int id) {
+        byte[] val = valGetFFValueAsBytes(model, tag, id);
+        byte[] ord = valGetFFOrderAsBytes(model, tag, id);
+        if (val != null && ord != null) {
+            return new FiniteInteger(new BigInteger(val), new BigInteger(ord));
+        } else {
+            return null;
+        }
+    }
 
     // Value (i.e., index) of a scalar or uninterpreted term
     // return 0 on success. -1 or -2 if there's an error.

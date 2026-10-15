@@ -198,6 +198,17 @@ public class Terms {
         return t;
     }
 
+    /**
+     * Finite field constants
+     */
+    static public int ffConst(BigInteger value, BigInteger order) {
+      if (order.signum() <= 0) {
+        throw new IllegalArgumentException("Order must be a prime number and can't be negative");
+      }
+      int t = Yices.ffConst(value, order);
+      if (t < 0) throw new YicesException();
+      return t;
+    }
 
     /*
      * UNINTERPRETED TERMS AND VARIABLES
@@ -735,6 +746,92 @@ public class Terms {
         int t = Yices.arithLt0(x);
         if (t < 0) throw new YicesException();
         return t;
+    }
+
+    /**
+     * FiniteField terms
+     */
+    static public int ffAdd(int left, int right) throws YicesException {
+      int t = Yices.ffAdd(left, right);
+      if (t < 0) throw new YicesException();
+      return t;
+    }
+
+    static public int ffSub(int left, int right) throws YicesException {
+      int t = Yices.ffSub(left, right);
+      if (t < 0) throw new YicesException();
+     return t;
+    }
+
+    static public int ffNeg(int arg) throws YicesException {
+     int t = Yices.ffNeg(arg);
+     if (t < 0) throw new YicesException();
+     return t;
+    }
+
+    static public int ffMul(int left, int right) throws YicesException {
+      int t = Yices.ffMul(left, right);
+      if (t < 0) throw new YicesException();
+      return t;
+    }
+
+    static public int ffSquare(int arg) throws YicesException {
+      int t = Yices.ffSquare(arg);
+      if (t < 0) throw new YicesException();
+      return t;
+    }
+
+    static public int ffPower(int arg, int exponent) throws YicesException {
+      if (exponent < 0) throw new IllegalArgumentException("exponent can't be negative");
+      int t = Yices.ffPower(arg, exponent);
+      if (t < 0) throw new YicesException();
+      return t;
+    }
+
+    static public int ffAdd(int... arg) throws YicesException {
+     if (arg.length == 0) throw new IllegalArgumentException("empty input");
+     int t = Yices.ffAdd(arg);
+     if (t < 0) throw new YicesException();
+     return t;
+    }
+
+    static public int ffAdd(List<Integer> arg) throws YicesException {
+     return ffAdd(arg.stream().mapToInt(Integer::intValue).toArray());
+    }
+
+    static public int ffMul(int... arg) throws YicesException {
+     if (arg.length == 0) throw new IllegalArgumentException("empty input");
+     int t = Yices.ffMul(arg);
+     if (t < 0) throw new YicesException();
+     return t;
+    }
+
+    static public int ffMul(List<Integer> arg) throws YicesException {
+     return ffMul(arg.stream().mapToInt(Integer::intValue).toArray());
+    }
+
+    static public int ffEq(int left, int right) throws YicesException {
+     int t = Yices.ffEq(left, right);
+     if (t < 0) throw new YicesException();
+     return t;
+    }
+
+    static public int ffNeq(int left, int right) throws YicesException {
+      int t = Yices.ffNeq(left, right);
+      if (t < 0) throw new YicesException();
+      return t;
+    }
+
+    static public int ffEq0(int x) throws YicesException {
+      int t = Yices.ffEq0(x);
+      if (t < 0) throw new YicesException();
+      return t;
+   }
+
+    static public int ffNeq0(int x) throws YicesException {
+      int t = Yices.ffNeq0(x);
+      if (t < 0) throw new YicesException();
+      return t;
     }
 
     /**
@@ -1324,6 +1421,12 @@ public class Terms {
         boolean[] b = Yices.bvConstValue(x);
         if (b == null) throw new YicesException();
         return b;
+    }
+
+    static public BigInteger ffConstValue(int x) throws YicesException {
+        BigInteger r = Yices.ffConstValue(x);
+        if (r == null) throw new YicesException();
+        return r;
     }
 
     // value of an arithmetic constant returned as a BigRational

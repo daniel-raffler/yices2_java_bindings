@@ -510,8 +510,46 @@ JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_bytesToRationalConstant(JNIEnv *
   return result;
 }
 
+/*
+ * Convert arrays of bytes for order and value to a finite field constant
+ * - return -1 if the order is not prime
+ */
+JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_bytesToFiniteFieldConstant(JNIEnv *env, jclass, jbyteArray value, jbyteArray order) {
+  jint result = -1;
+  jsize value_size, order_size;
+  jbyte *value_bytes, *order_bytes;
 
+  value_size = env->GetArrayLength(value);
+  value_bytes = env->GetByteArrayElements(value, NULL);
+  order_size = env->GetArrayLength(order);
+  order_bytes = env->GetByteArrayElements(order, NULL);
+  if (value_bytes == NULL || order_bytes == NULL) {
+    out_of_mem_exception(env);
+  } else {
+    try {
+      mpz_t value_z, order_z;
 
+      mpz_init(value_z);
+      mpz_init(order_z);
+
+      byte_array_to_mpz(value_z, value_bytes, value_size);
+      byte_array_to_mpz(order_z, order_bytes, order_size);
+
+      result = yices_ff_const(value_z, order_z);
+
+      mpz_clear(order_z);
+      mpz_clear(value_z);
+
+    } catch (std::bad_alloc &ba) {
+      out_of_mem_exception(env);
+    }
+  }
+
+  if (value_bytes != NULL) env->ReleaseByteArrayElements(value, value_bytes, JNI_ABORT);
+  if (order_bytes != NULL) env->ReleaseByteArrayElements(order, order_bytes, JNI_ABORT);
+
+  return result;
+}
 
 #if 0
 /*
@@ -713,6 +751,37 @@ JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_bvType(JNIEnv *env, jclass, jint
     out_of_mem_exception(env);
     return -1;
   }
+}
+
+/*
+ * Convert arrays of bytes for order to a finite field constant
+ * - return -1 if the order is not prime
+ */
+JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_bytesToFiniteFieldType(JNIEnv *env, jclass, jbyteArray a) {
+  jint result = -1;
+  jsize n;
+  jbyte *b;
+
+  n = env->GetArrayLength(a);
+  b = env->GetByteArrayElements(a, NULL);
+  if (b == NULL) {
+    out_of_mem_exception(env);
+  } else {
+    try {
+      mpz_t z;
+
+      mpz_init(z);
+      byte_array_to_mpz(z, b, n);
+      result = yices_ff_type(z);
+      mpz_clear(z);
+
+    } catch (std::bad_alloc &ba) {
+      out_of_mem_exception(env);
+    }
+
+    env->ReleaseByteArrayElements(a, b, JNI_ABORT); // don't change a
+  }
+  return result;
 }
 
 /*
@@ -1775,6 +1844,143 @@ JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_arithLt0(JNIEnv *env, jclass, ji
 }
 
 /*
+ * Finite field terms
+ */
+
+JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_ffAdd__II(JNIEnv *env, jclass, jint left, jint right) {
+  try {
+    return yices_ff_add(left, right);
+  } catch (std::bad_alloc &ba) {
+    out_of_mem_exception(env);
+    return -1;
+  }
+}
+
+JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_ffSub__II(JNIEnv *env, jclass, jint left, jint right) {
+  try {
+    return yices_ff_sub(left, right);
+  } catch (std::bad_alloc &ba) {
+    out_of_mem_exception(env);
+    return -1;
+  }
+}
+
+JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_ffNeg(JNIEnv *env, jclass, jint arg) {
+  try {
+    return yices_ff_neg(arg);
+  } catch (std::bad_alloc &ba) {
+    out_of_mem_exception(env);
+    return -1;
+  }
+}
+
+JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_ffMul__II(JNIEnv *env, jclass, jint left, jint right) {
+  try {
+    return yices_ff_mul(left, right);
+  } catch (std::bad_alloc &ba) {
+    out_of_mem_exception(env);
+    return -1;
+  }
+}
+
+JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_ffSquare(JNIEnv *env, jclass, jint arg) {
+  try {
+    return yices_ff_square(arg);
+  } catch (std::bad_alloc &ba) {
+    out_of_mem_exception(env);
+    return -1;
+  }
+}
+
+JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_ffPower(JNIEnv *env, jclass, jint arg, jint exponent) {
+  if (exponent < 0) {
+    return -1; // negative exponents are not supported
+  }
+  try {
+    return yices_ff_power(arg, exponent);
+  } catch (std::bad_alloc &ba) {
+    out_of_mem_exception(env);
+    return -1;
+  }
+}
+
+JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_ffAdd___3I(JNIEnv *env, jclass, jintArray arg) {
+  jint result = -1;
+  jsize n = env->GetArrayLength(arg);
+
+  if (n > 0) {
+    term_t *a = array2terms(env, arg, NULL);
+    if (a == NULL) {
+      out_of_mem_exception(env);
+    } else {
+      try {
+        result = yices_ff_sum(n, a);
+      } catch (std::bad_alloc &ba) {
+        out_of_mem_exception(env);
+      }
+      release_term_elems(env, arg, a);
+    }
+  }
+  return result;
+}
+
+JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_ffMul___3I(JNIEnv *env, jclass, jintArray arg) {
+  jint result = -1;
+  jsize n = env->GetArrayLength(arg);
+
+  if (n > 0) {
+    term_t *a = array2terms(env, arg, NULL);
+    if (a == NULL) {
+      out_of_mem_exception(env);
+    } else {
+      try {
+        result = yices_ff_product(n, a);
+      } catch (std::bad_alloc &ba) {
+        out_of_mem_exception(env);
+      }
+      release_term_elems(env, arg, a);
+    }
+  }
+  return result;
+}
+
+JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_ffEq(JNIEnv *env, jclass, jint left, jint right) {
+  try {
+    return yices_ff_eq_atom(left, right);
+  } catch (std::bad_alloc &ba) {
+    out_of_mem_exception(env);
+    return -1;
+  }
+}
+
+JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_ffNeq(JNIEnv *env, jclass, jint left, jint right) {
+  try {
+    return yices_ff_neq_atom(left, right);
+  } catch (std::bad_alloc &ba) {
+    out_of_mem_exception(env);
+    return -1;
+  }
+}
+
+JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_ffEq0(JNIEnv *env, jclass, jint x) {
+  try {
+    return yices_ff_eq0_atom(x);
+  } catch (std::bad_alloc &ba) {
+    out_of_mem_exception(env);
+    return -1;
+  }
+}
+
+JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_ffNeq0(JNIEnv *env, jclass, jint x) {
+  try {
+    return yices_ff_neq0_atom(x);
+  } catch (std::bad_alloc &ba) {
+    out_of_mem_exception(env);
+    return -1;
+  }
+}
+
+/*
  * BITVECTOR TERMS
  */
 // convert x to a bitvector od n bits
@@ -2728,6 +2934,35 @@ JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_bvSumComponentTerm(JNIEnv *env, 
   return result;
 }
 
+JNIEXPORT jbyteArray JNICALL Java_com_sri_yices_Yices_ffSumComponentFactor(JNIEnv *env, jclass, jint x, jint idx) {
+  jbyteArray result = NULL;
+  jint t = -1;
+
+  mpz_t z;
+  mpz_init(z);
+
+  int32_t code = yices_ffsum_component(x, idx, z, &t);
+  if (code >= 0) {
+    result = mpz_to_byte_array(env, z);
+  }
+  mpz_clear(z);
+
+  return result;
+}
+
+JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_ffSumComponentTerm(JNIEnv *env, jclass, jint x, jint idx) {
+  jint result = -1;
+
+  mpz_t z;
+  mpz_init(z);
+
+  yices_ffsum_component(x, idx, z, &result);
+
+  mpz_clear(z);
+
+  return result;
+}
+
 JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_productComponentTerm(JNIEnv *env, jclass, jint x, jint idx) {
   uint32_t p = 0;
   jint t = -1;
@@ -2797,6 +3032,24 @@ JNIEXPORT jbooleanArray JNICALL Java_com_sri_yices_Yices_bvConstValue(JNIEnv *en
   return result;
 }
 
+
+/*
+ * Value of a finite field constant x
+ * - return NULL if x is not a finite field constant
+ * - return a byte array that contains the value otherwise
+ */
+JNIEXPORT jbyteArray JNICALL Java_com_sri_yices_Yices_ffConstValueAsBytes(JNIEnv *env, jclass, jint x) {
+  jbyteArray result = NULL;
+  mpz_t z;
+
+  mpz_init(z);
+  if (yices_ff_const_value(x, z) >= 0) {
+    result = mpz_to_byte_array(env, z);
+  }
+  mpz_clear(z);
+
+  return result;
+}
 
 /*
  * Numerator of a rational constant x
@@ -3535,6 +3788,35 @@ JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_modelSetRational(JNIEnv *env, jc
 #endif
 }
 
+// Since 2.8.0
+JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_modelSetFFValueFromBytes(JNIEnv *env, jclass, jlong model, jint var, jbyteArray arr){
+  jint result = -1;
+  jsize size;
+  jbyte *value;
+
+  size = env->GetArrayLength(arr);
+  value = env->GetByteArrayElements(arr, NULL);
+  if (value == NULL) {
+    out_of_mem_exception(env);
+  } else {
+    try {
+      mpz_t z;
+
+      mpz_init(z);
+      byte_array_to_mpz(z, value, size);
+      result = yices_model_set_ff_mpz(reinterpret_cast<model_t*>(model), var, z);
+      mpz_clear(z);
+
+    } catch (std::bad_alloc &ba) {
+      out_of_mem_exception(env);
+    }
+
+    env->ReleaseByteArrayElements(arr, value, JNI_ABORT);
+  }
+
+  return result;
+}
+
 // Since 2.6.4
 JNIEXPORT jint JNICALL Java_com_sri_yices_Yices_modelSetBVInteger(JNIEnv *env, jclass, jlong model, jint var, jlong val) {
 #ifdef YICES_AT_LEAST_2_6_4
@@ -3761,6 +4043,52 @@ JNIEXPORT jbyteArray JNICALL Java_com_sri_yices_Yices_getRationalValueDenAsBytes
   }
 
   return result;
+}
+
+/*
+ * Value of term t assumed to be a final field.
+ * - we return t's value in two steps: one call to get the value, and one to get the order
+ */
+JNIEXPORT jbyteArray JNICALL Java_com_sri_yices_Yices_getFFValueAsBytes(JNIEnv *env, jclass, jlong model, jint t) {
+  jbyteArray result = NULL;
+  mpz_t value, order;
+
+  try {
+    mpz_init(value);
+    mpz_init(order);
+
+    if (yices_get_ff_value(reinterpret_cast<model_t *>(model), t, value, order) >= 0) {
+      result = mpz_to_byte_array(env, value);
+    }
+    mpz_clear(order);
+    mpz_clear(value);
+
+  } catch (std::bad_alloc &ba) {
+    out_of_mem_exception(env);
+  }
+
+  return result;
+}
+
+JNIEXPORT jbyteArray JNICALL Java_com_sri_yices_Yices_getFFOrderAsBytes(JNIEnv *env, jclass, jlong model, jint t) {
+  jbyteArray result = NULL;
+    mpz_t value, order;
+
+    try {
+      mpz_init(value);
+      mpz_init(order);
+
+      if (yices_get_ff_value(reinterpret_cast<model_t *>(model), t, value, order) >= 0) {
+        result = mpz_to_byte_array(env, order);
+      }
+      mpz_clear(order);
+      mpz_clear(value);
+
+    } catch (std::bad_alloc &ba) {
+      out_of_mem_exception(env);
+    }
+
+    return result;
 }
 
 JNIEXPORT jbooleanArray JNICALL Java_com_sri_yices_Yices_getBvValue(JNIEnv *env, jclass, jlong model, jint t) {
@@ -4629,6 +4957,60 @@ JNIEXPORT jbyteArray JNICALL Java_com_sri_yices_Yices_valGetRationalDenAsBytes(J
   return result;
 
 
+}
+
+JNIEXPORT jbyteArray JNICALL Java_com_sri_yices_Yices_valGetFFValueAsBytes(JNIEnv *env, jclass, jlong model, jint tag, jint id){
+  yval_t yval;
+  jbyteArray result = NULL;
+  mpz_t value, order;
+
+  if (!convertToYval(tag, id, &yval) ||  tag != YVAL_FINITEFIELD) {
+    return result;
+  }
+
+  try {
+    mpz_init(value);
+    mpz_init(order);
+
+    if (yices_val_get_ff(reinterpret_cast<model_t *>(model), &yval, value, order) >= 0) {
+      result = mpz_to_byte_array(env, value);
+    }
+
+    mpz_clear(order);
+    mpz_clear(value);
+
+  } catch (std::bad_alloc &ba) {
+    out_of_mem_exception(env);
+  }
+
+  return result;
+}
+
+JNIEXPORT jbyteArray JNICALL Java_com_sri_yices_Yices_valGetFFOrderAsBytes(JNIEnv *env, jclass, jlong model, jint tag, jint id){
+  yval_t yval;
+  jbyteArray result = NULL;
+  mpz_t value, order;
+
+  if (!convertToYval(tag, id, &yval) ||  tag != YVAL_FINITEFIELD) {
+    return result;
+  }
+
+  try {
+    mpz_init(value);
+    mpz_init(order);
+
+    if (yices_val_get_ff(reinterpret_cast<model_t *>(model), &yval, value, order) >= 0) {
+      result = mpz_to_byte_array(env, order);
+    }
+
+    mpz_clear(order);
+    mpz_clear(value);
+
+  } catch (std::bad_alloc &ba) {
+    out_of_mem_exception(env);
+  }
+
+  return result;
 }
 
 //iam: can I really get away without checking the tye of the children array?
