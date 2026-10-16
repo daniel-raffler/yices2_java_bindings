@@ -9,7 +9,6 @@ permissions:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-  YICES_REF: yices-2.7.0
 
 jobs:
   unix:
@@ -29,7 +28,6 @@ jobs:
         uses: actions/checkout@v5
         with:
           repository: SRI-CSL/yices2
-          ref: ${{ env.YICES_REF }}
           path: y2
           fetch-depth: 1
           sparse-checkout: |
